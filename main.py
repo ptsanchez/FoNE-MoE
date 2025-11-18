@@ -55,7 +55,7 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
     
     wandb.init(
-        project="FoNE_TS",
+        project="FoNE",
         config=vars(args),
         name=run_name
     )
@@ -74,7 +74,7 @@ def main():
     # Load model and tokenizer
     model, tokenizer = load_model_and_tokenizer(
         model_name=args.model,
-        cache_dir="/home/tianyizhou/hg_cache",
+        cache_dir="./hg_cache",
         device=device,
         train_from_scratch=args.train_from_scratch,
         size_level=args.model_size_level,
