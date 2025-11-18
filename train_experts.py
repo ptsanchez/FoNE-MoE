@@ -38,19 +38,19 @@ from expert_system import ExpertModelManager, ExpertRouter, ExpressionParser
 EXPERT_CONFIGS = {
     'addition': {
         'dataset': 'Onlydrinkwater/int_addition',
-        'description': 'Addition operations'
+        'description': 'Single-digit to 3-digit addition'
     },
     'subtraction': {
-        'dataset': 'Onlydrinkwater/int_subtract',  
-        'description': 'Subtraction operations'
+        'dataset': 'Onlydrinkwater/int_subtract', 
+        'description': 'Subtraction operations (using addition dataset for now)'
     },
     'multiplication': {
         'dataset': 'Onlydrinkwater/int_multiplication', 
-        'description': 'Multiplication operations'
+        'description': 'Multiplication operations (using addition dataset for now)'
     },
     'division': {
         'dataset': 'Onlydrinkwater/int_division',
-        'description': 'Division operations'
+        'description': 'Division operations (using addition dataset for now)'
     }
 }
 
@@ -67,11 +67,11 @@ def get_base_args():
         frac_digit_len=0,
         len_gen_size=0,
         lr=5e-4,
-        model='meta-llama/Llama-3.2-1B-Instruct',
+        model='Qwen/Qwen2.5-7B-Instruct',
         train_from_scratch=True,
         model_size_level=4,
-        num_train_samples=10000,
-        num_test_samples=2000,
+        num_train_samples=100000,
+        num_test_samples=20000,
         seed=42,
         method='fne',
         period_base_list=[10.0],
@@ -223,6 +223,7 @@ def test_single_expert(operation, test_expressions):
     
     print(f"\n{'='*60}")
     print(f"Testing {operation.upper()} Expert")
+    print(f"Model dtype: {next(model.parameters()).dtype}")
     print(f"Metadata: {metadata}")
     print(f"{'='*60}\n")
     
@@ -254,6 +255,8 @@ def test_single_expert(operation, test_expressions):
             
         except Exception as e:
             print(f"✗ {expr} - Error: {e}")
+            import traceback
+            traceback.print_exc()
             results.append({
                 'expression': expr,
                 'predicted': None,
@@ -380,7 +383,7 @@ def main():
                        help='Number of training epochs')
     parser.add_argument('--batch_size', type=int, default=32,
                        help='Batch size')
-    parser.add_argument('--num_train_samples', type=int, default=10000,
+    parser.add_argument('--num_train_samples', type=int, default=100000,
                        help='Number of training samples')
     
     args = parser.parse_args()
