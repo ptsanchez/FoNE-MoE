@@ -41,15 +41,15 @@ EXPERT_CONFIGS = {
         'description': 'Single-digit to 3-digit addition'
     },
     'subtraction': {
-        'dataset': 'Onlydrinkwater/int_subtract', 
+        'dataset': 'Onlydrinkwater/int_subtraction',  # TODO: Change when subtraction dataset available
         'description': 'Subtraction operations (using addition dataset for now)'
     },
     'multiplication': {
-        'dataset': 'Onlydrinkwater/int_multiplication', 
+        'dataset': 'Onlydrinkwater/int_multiplication',  # TODO: Change when multiplication dataset available
         'description': 'Multiplication operations (using addition dataset for now)'
     },
     'division': {
-        'dataset': 'Onlydrinkwater/int_division',
+        'dataset': 'Onlydrinkwater/int_division',  # TODO: Change when division dataset available
         'description': 'Division operations (using addition dataset for now)'
     }
 }
@@ -70,8 +70,8 @@ def get_base_args():
         model='Qwen/Qwen2.5-7B-Instruct',
         train_from_scratch=True,
         model_size_level=4,
-        num_train_samples=100000,
-        num_test_samples=20000,
+        num_train_samples=10000,
+        num_test_samples=2000,
         seed=42,
         method='fne',
         period_base_list=[10.0],
@@ -221,9 +221,13 @@ def test_single_expert(operation, test_expressions):
     manager = ExpertModelManager()
     model, fne, metadata = manager.load_expert(model, fne, operation, device)
     
+    # Ensure FNE is in float32 (should already be done in load_expert, but double-check)
+    fne = fne.float()
+    
     print(f"\n{'='*60}")
     print(f"Testing {operation.upper()} Expert")
     print(f"Model dtype: {next(model.parameters()).dtype}")
+    print(f"FNE dtype: {next(fne.parameters()).dtype}")
     print(f"Metadata: {metadata}")
     print(f"{'='*60}\n")
     
@@ -235,6 +239,7 @@ def test_single_expert(operation, test_expressions):
     results = []
     for expr in test_expressions:
         try:
+            print(f"\nTesting: {expr}")
             result = router.solve_expression(expr, tokenizer, use_pemdas=False,
                                             int_digit_len=args.int_digit_len,
                                             frac_digit_len=args.frac_digit_len)
@@ -256,6 +261,7 @@ def test_single_expert(operation, test_expressions):
         except Exception as e:
             print(f"✗ {expr} - Error: {e}")
             import traceback
+            print("\nFull traceback:")
             traceback.print_exc()
             results.append({
                 'expression': expr,
@@ -303,6 +309,25 @@ def test_router_multi_operation():
     # Initialize router
     manager = ExpertModelManager()
     router = ExpertRouter(manager, model, fne, device)
+    
+    # Pre-load experts to avoid loading during each test
+    print("Loading required experts...")
+    for expr, expected in test_cases:
+        # Parse expression to determine which experts are needed
+        from expert_system import ExpressionParser
+        try:
+            subproblems = ExpressionParser.simple_left_to_right(expr)
+            for subproblem in subproblems:
+                operation_name = router.OPERATION_MAP.get(subproblem.operator)
+                if operation_name and operation_name not in router.experts:
+                    print(f"  Loading {operation_name} expert...")
+                    router.load_expert(operation_name)
+                    # Ensure FNE is in float32
+                    router.experts[operation_name]['fne'] = router.experts[operation_name]['fne'].float()
+        except Exception as e:
+            print(f"  Warning: Could not pre-load experts for {expr}: {e}")
+    
+    print("All required experts loaded.\n")
     
     # Test cases (left-to-right evaluation, no PEMDAS)
     test_cases = [
@@ -383,7 +408,7 @@ def main():
                        help='Number of training epochs')
     parser.add_argument('--batch_size', type=int, default=32,
                        help='Batch size')
-    parser.add_argument('--num_train_samples', type=int, default=100000,
+    parser.add_argument('--num_train_samples', type=int, default=10000,
                        help='Number of training samples')
     
     args = parser.parse_args()
