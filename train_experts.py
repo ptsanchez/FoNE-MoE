@@ -37,20 +37,20 @@ from expert_system import ExpertModelManager, ExpertRouter, ExpressionParser
 
 EXPERT_CONFIGS = {
     'addition': {
-        'dataset': 'Onlydrinkwater/1000addition',
-        'description': 'Single-digit to 3-digit addition'
+        'dataset': 'Onlydrinkwater/int_addition',
+        'description': 'Addition operations'
     },
     'subtraction': {
-        'dataset': 'Onlydrinkwater/1000addition',  # TODO: Change when subtraction dataset available
-        'description': 'Subtraction operations (using addition dataset for now)'
+        'dataset': 'Onlydrinkwater/int_subtract',  
+        'description': 'Subtraction operations'
     },
     'multiplication': {
-        'dataset': 'Onlydrinkwater/1000addition',  # TODO: Change when multiplication dataset available
-        'description': 'Multiplication operations (using addition dataset for now)'
+        'dataset': 'Onlydrinkwater/int_multiplication', 
+        'description': 'Multiplication operations'
     },
     'division': {
-        'dataset': 'Onlydrinkwater/1000addition',  # TODO: Change when division dataset available
-        'description': 'Division operations (using addition dataset for now)'
+        'dataset': 'Onlydrinkwater/int_division',
+        'description': 'Division operations'
     }
 }
 
