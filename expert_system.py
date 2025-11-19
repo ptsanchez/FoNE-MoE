@@ -74,6 +74,14 @@ class ExpertModelManager:
         model.eval()
         fne.eval()
         
+        # Move to device
+        model = model.to(device)
+        fne = fne.to(device)
+        
+        # Ensure FNE stays in float32 for numerical stability
+        # This is important because layer_norm and linear layers need consistent dtypes
+        fne = fne.float()
+        
         logging.info(f"Loaded {operation} expert from {checkpoint_path}")
         logging.info(f"Metadata: {checkpoint['metadata']}")
         
@@ -156,8 +164,8 @@ class ExpressionParser:
         Returns subproblems in evaluation order.
         """
         # TODO: Implement full PEMDAS parser
-        # For now, will only be using simple left-to-right arithmetic expressions (i.e 10*5-20=)
-        # Require building an expression tree
+        # For now, let's use simple left-to-right
+        # This would require building an expression tree
         raise NotImplementedError("PEMDAS parsing coming in Phase 2")
 
 
@@ -255,16 +263,29 @@ class ExpertRouter:
         
         scatter_tensor = scatter_tensor.unsqueeze(0)  # Add batch dimension
         
-        # Create attention mask
+        # Create attention mask and last_token_mask
         attention_mask = torch.ones_like(input_ids)
+        
+        # Create last_token_mask (marks the position of the last non-pad token)
+        last_token_mask = torch.zeros_like(input_ids, dtype=torch.float32)
+        # For single sequence, last token is at the end
+        last_token_mask[0, -1] = 1.0
         
         # Get embeddings
         with torch.no_grad():
             from train.utils import get_regular_embeddings
             regular_embeddings = get_regular_embeddings(model, input_ids)
+            
+            # Get model's dtype (BFloat16, Float32, etc.)
+            model_dtype = regular_embeddings.dtype
+            
+            # Compute Fourier embeddings and convert to model's dtype
             fourier_embeddings = fne(scatter_tensor)
-            fourier_embeddings = fourier_embeddings.to(dtype=regular_embeddings.dtype)
+            fourier_embeddings = fourier_embeddings.to(dtype=model_dtype)
             input_embeddings = regular_embeddings + fourier_embeddings
+            
+            # Ensure attention mask is correct dtype (should be long/int)
+            attention_mask = attention_mask.long()
             
             # Forward pass
             outputs = model(inputs_embeds=input_embeddings, 
@@ -272,11 +293,17 @@ class ExpertRouter:
                           output_hidden_states=True)
             
             before_decoder = outputs.hidden_states[-1]
-            last_token_hidden = before_decoder[:, -1, :]  # Last token
+            
+            # Use the same method as training: mask and sum
+            last_token_hidden_state = (before_decoder * last_token_mask.unsqueeze(-1)).sum(dim=1)
+            
+            # CRITICAL: Convert to float32 before passing to FNE
+            # FNE's layer_norm and linear layers are in float32
+            last_token_hidden_state = last_token_hidden_state.float()
             
             # Predict result
             result = fne.fourier_compute_prediction(
-                last_token_hidden, int_digit_len, frac_digit_len
+                last_token_hidden_state, int_digit_len, frac_digit_len
             )
         
         return result.item()
@@ -390,10 +417,10 @@ def example_train_all_experts():
     
     # Dataset mapping for each operation
     expert_datasets = {
-        'addition': 'Onlydrinkwater/int_addition',
-        'subtraction': 'Onlydrinkwater/int_subtract',  # You'll need these
-        'multiplication': 'Onlydrinkwater/int_multiplication',
-        'division': 'Onlydrinkwater/int_division'
+        'addition': 'Onlydrinkwater/1000addition',
+        'subtraction': 'Onlydrinkwater/1000subtraction',  # You'll need these
+        'multiplication': 'Onlydrinkwater/1000multiplication',
+        'division': 'Onlydrinkwater/1000division'
     }
     
     for operation, dataset in expert_datasets.items():
@@ -457,10 +484,10 @@ def example_use_router():
 
 if __name__ == "__main__":
     # Uncomment to train experts:
-    example_train_all_experts()
+    # example_train_all_experts()
     
     # Uncomment to test router:
-    example_use_router()
+    # example_use_router()
     
     print("Expert Router System Ready!")
     print("\nNext steps:")
