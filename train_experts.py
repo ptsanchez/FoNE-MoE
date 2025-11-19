@@ -283,6 +283,14 @@ def test_single_expert(operation, test_expressions):
 
 def test_router_multi_operation():
     """Test the router on multi-operation expressions."""
+
+    # Test cases (left-to-right evaluation, no PEMDAS)
+    test_cases = [
+        ("100+50-25", 125),      # (100+50)-25 = 150-25 = 125
+        ("50-20+10", 40),        # (50-20)+10 = 30+10 = 40
+        ("10+20+30", 60),        # (10+20)+30 = 30+30 = 60
+        ("100-10-20-30", 40),    # ((100-10)-20)-30 = 40
+    ]
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
@@ -329,13 +337,6 @@ def test_router_multi_operation():
     
     print("All required experts loaded.\n")
     
-    # Test cases (left-to-right evaluation, no PEMDAS)
-    test_cases = [
-        ("100+50-25", 125),      # (100+50)-25 = 150-25 = 125
-        ("50-20+10", 40),        # (50-20)+10 = 30+10 = 40
-        ("10+20+30", 60),        # (10+20)+30 = 30+30 = 60
-        ("100-10-20-30", 40),    # ((100-10)-20)-30 = 40
-    ]
     
     print("\n" + "="*80)
     print("TESTING ROUTER WITH MULTI-OPERATION EXPRESSIONS")
