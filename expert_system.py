@@ -244,19 +244,28 @@ class ExpertRouter:
         model = expert['model']
         fne = expert['fne']
         
-        # Format input: "NUM op NUM ="
+        # CRITICAL: Match the EXACT format from training!
+        # Training uses: ' [NUM] + [NUM] =' (single spaces, no trailing space)
+        # This creates 6 tokens with [NUM] at positions [1, 4]
         left = subproblem.left_operand
         right = subproblem.right_operand
         
-        # Create input string
-        input_text = f" [NUM]  {subproblem.operator}  [NUM]  ="
+        # Format: space + [NUM] + space + operator + space + [NUM] + space + equals
+        input_text = f' [NUM] {subproblem.operator} [NUM] ='
         input_ids = tokenizer.encode(input_text, return_tensors="pt").to(self.device)
         
-        # Create scatter tensor with actual numbers
+        # Debug: Verify format matches training
         num_token_id = tokenizer.convert_tokens_to_ids('[NUM]')
+        num_positions = (input_ids[0] == num_token_id).nonzero(as_tuple=True)[0]
+        expected_positions = [1, 4]  # From diagnostic output
+        if num_positions.tolist() != expected_positions:
+            logging.warning(f"Format mismatch! Expected [NUM] at {expected_positions}, got {num_positions.tolist()}")
+            logging.warning(f"Input text: '{input_text}'")
+            logging.warning(f"Decoded: '{tokenizer.decode(input_ids[0])}'")
+        
+        # Create scatter tensor with actual numbers
         scatter_tensor = torch.zeros(input_ids.shape[1], dtype=torch.float64, device=self.device)
         
-        num_positions = (input_ids[0] == num_token_id).nonzero(as_tuple=True)[0]
         if len(num_positions) >= 2:
             scatter_tensor[num_positions[0]] = left
             scatter_tensor[num_positions[1]] = right
@@ -417,10 +426,10 @@ def example_train_all_experts():
     
     # Dataset mapping for each operation
     expert_datasets = {
-        'addition': 'Onlydrinkwater/1000addition',
-        'subtraction': 'Onlydrinkwater/1000subtraction',  # You'll need these
-        'multiplication': 'Onlydrinkwater/1000multiplication',
-        'division': 'Onlydrinkwater/1000division'
+        'addition': 'Onlydrinkwater/int-addition',
+        'subtraction': 'Onlydrinkwater/int-subtraction',  # You'll need these
+        'multiplication': 'Onlydrinkwater/int-multiplication',
+        'division': 'Onlydrinkwater/int-division'
     }
     
     for operation, dataset in expert_datasets.items():
@@ -472,9 +481,9 @@ def example_use_router():
     
     # Test expressions
     test_cases = [
-        "100+50-25",      # Left-to-right: 100+50=150, 150-25=125
-        "10*2+5",         # Left-to-right: 10*2=20, 20+5=25
-        "100-20-30",      # Left-to-right: 100-20=80, 80-30=50
+        "10000+5000-2500",      # Left-to-right: 100+50=150, 150-25=125
+        "10000*20+500",         # Left-to-right: 10*2=20, 20+5=25
+        "10000-200-3000",      # Left-to-right: 100-20=80, 80-30=50
     ]
     
     for expr in test_cases:

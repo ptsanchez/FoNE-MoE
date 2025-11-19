@@ -70,8 +70,8 @@ def get_base_args():
         model='Qwen/Qwen2.5-7B-Instruct',
         train_from_scratch=True,
         model_size_level=4,
-        num_train_samples=10000,
-        num_test_samples=2000,
+        num_train_samples=100000,
+        num_test_samples=20000,
         seed=42,
         method='fne',
         period_base_list=[10.0],
@@ -409,7 +409,7 @@ def main():
                        help='Number of training epochs')
     parser.add_argument('--batch_size', type=int, default=32,
                        help='Batch size')
-    parser.add_argument('--num_train_samples', type=int, default=10000,
+    parser.add_argument('--num_train_samples', type=int, default=100000,
                        help='Number of training samples')
     
     args = parser.parse_args()
@@ -431,8 +431,8 @@ def main():
     elif args.test_expert:
         # Test expressions for each operation
         test_sets = {
-            'addition': ['100+50', '25+75', '123+456', '999+1'],
-            'subtraction': ['100-50', '75-25', '456-123', '1000-1'],
+            'addition': ['10000+500', '2500+7005', '10203+40506', '9909+1000'],
+            'subtraction': ['10000-1000', '9500-200', '12560-123', '19000-201'],
             'multiplication': ['10*5', '12*3', '25*4', '100*2'],
             'division': ['100/2', '75/3', '144/12', '1000/10']
         }
