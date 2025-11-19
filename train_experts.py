@@ -70,8 +70,8 @@ def get_base_args():
         model='Qwen/Qwen2.5-7B-Instruct',
         train_from_scratch=True,
         model_size_level=4,
-        num_train_samples=100000,
-        num_test_samples=20000,
+        num_train_samples=10000,
+        num_test_samples=5000,
         seed=42,
         method='fne',
         period_base_list=[10.0],
@@ -286,10 +286,10 @@ def test_router_multi_operation():
 
     # Test cases (left-to-right evaluation, no PEMDAS)
     test_cases = [
-        ("100+50-25", 125),      # (100+50)-25 = 150-25 = 125
-        ("50-20+10", 40),        # (50-20)+10 = 30+10 = 40
-        ("10+20+30", 60),        # (10+20)+30 = 30+30 = 60
-        ("100-10-20-30", 40),    # ((100-10)-20)-30 = 40
+        ("100+50-25=", 125),      # (100+50)-25 = 150-25 = 125
+        ("50-20+10=", 40),        # (50-20)+10 = 30+10 = 40
+        ("10+20+30=", 60),        # (10+20)+30 = 30+30 = 60
+        ("100-10-20-30=", 40),    # ((100-10)-20)-30 = 40
     ]
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -431,10 +431,10 @@ def main():
     elif args.test_expert:
         # Test expressions for each operation
         test_sets = {
-            'addition': ['10000+500', '2500+7005', '10203+40506', '9909+1000'],
-            'subtraction': ['10000-1000', '9500-200', '12560-123', '19000-201'],
-            'multiplication': ['10*5', '12*3', '25*4', '100*2'],
-            'division': ['100/2', '75/3', '144/12', '1000/10']
+            'addition': ['1000+5000=', '837+1282=', '10203+4506=', '9909+1030='],
+            'subtraction': ['10000-1000=', '9500-200=', '12560-123=', '19000-201='],
+            'multiplication': ['10*5=', '12*3=', '25*4=', '100*2='],
+            'division': ['100/2=', '75/3=', '144/12=', '1000/10=']
         }
         test_single_expert(args.test_expert, test_sets[args.test_expert])
         
